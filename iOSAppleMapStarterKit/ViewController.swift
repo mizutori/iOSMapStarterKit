@@ -78,6 +78,28 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
     // MARK: - Map
     private func updateMap(currentLocation: CLLocation){
         print("Location:\(currentLocation.coordinate.latitude), \(currentLocation.coordinate.longitude)")
+
+        let now = Date()
+        let delta = now.timeIntervalSince(currentLocation.timestamp)
+        print("This location was obtianed \(delta) seconds ago")
+        if delta > 60{
+            print("This location is too old")
+            return
+        }
+
+        let horizontalRegionInMeters: Double = 5000
+
+        let width = self.mapView.frame.width
+        let height = self.mapView.frame.height
+
+        let verticalRegionInMeters = Double(height / width * CGFloat(horizontalRegionInMeters))
+
+        let region:MKCoordinateRegion = MKCoordinateRegion(center: currentLocation.coordinate,
+                                                           latitudinalMeters: verticalRegionInMeters,
+                                                           longitudinalMeters: horizontalRegionInMeters)
+
+        mapView.setRegion(region, animated: true)
+
     }
 
     // MARK - Utility
