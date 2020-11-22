@@ -91,7 +91,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
             return
         }
 
-        let horizontalRegionInMeters: Double = 5000
+        let horizontalRegionInMeters: Double = 500
 
         let width = self.mapView.frame.width
         let height = self.mapView.frame.height
@@ -113,8 +113,10 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         let search = MKLocalSearch(request: request)
         search.start { [weak self] response, _ in
             guard let response = response else {
+                print("Search done but no data")
                 return
             }
+            print("Search done but no \(response.mapItems.count) data")
             self?.searchedMapItems = response.mapItems
             self?.showPins()
         }
