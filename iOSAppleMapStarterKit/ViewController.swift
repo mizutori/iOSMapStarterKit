@@ -9,12 +9,14 @@
 import UIKit
 import MapKit
 
-class ViewController: UIViewController, CLLocationManagerDelegate {
+class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDelegate {
     @IBOutlet weak var mapView: MKMapView!
 
     var locationManager:CLLocationManager!
 
     var didStartUpdatingLocation = false
+
+    var searchedMapItems:[MKMapItem] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,6 +24,8 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
         locationManager = CLLocationManager()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+
+        mapView.delegate = self
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -87,7 +91,7 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
             return
         }
 
-        let horizontalRegionInMeters: Double = 5000
+        let horizontalRegionInMeters: Double = 500
 
         let width = self.mapView.frame.width
         let height = self.mapView.frame.height
@@ -98,9 +102,43 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
                                                            latitudinalMeters: verticalRegionInMeters,
                                                            longitudinalMeters: horizontalRegionInMeters)
 
-        mapView.setRegion(region, animated: true)
+        mapView.setRegion(region, animated: false)
+        searchNearby(region: region)
+    }
+
+    private func searchNearby(region: MKCoordinateRegion) {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "coffee"
+        request.region = mapView.region
+        let search = MKLocalSearch(request: request)
+        search.start { [weak self] response, _ in
+            guard let response = response else {
+                print("Search done but no data")
+                return
+            }
+            print("Search done but no \(response.mapItems.count) data")
+            self?.searchedMapItems = response.mapItems
+            self?.showPins()
+        }
+    }
+
+    private func showPins(){
+        mapView.removeAnnotations(mapView.annotations)
+
+        for item in self.searchedMapItems{
+            let placemark = item.placemark
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = placemark.coordinate
+            annotation.title = placemark.name
+            if let city = placemark.locality,
+            let state = placemark.administrativeArea {
+                annotation.subtitle = "\(city) \(state)"
+            }
+            mapView.addAnnotation(annotation)
+        }
 
     }
+
 
     // MARK - Utility
     private func showPermissionAlert(){
@@ -121,6 +159,38 @@ class ViewController: UIViewController, CLLocationManagerDelegate {
         alert.addAction(goToSetting)
         alert.addAction(cancelAction)
         self.present(alert, animated: true, completion: nil)
+    }
+
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        //自分のアイコンだったらパスする
+        guard annotation as? MKUserLocation != mapView.userLocation else { return nil }
+
+        let identifier = "MyPin"
+        var annotationView: MKAnnotationView!
+
+        if annotationView == nil {
+            annotationView = MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+        }
+
+        // pinに表示する画像を指定
+        annotationView.image = UIImage(named: "pin")!
+        annotationView.annotation = annotation
+        annotationView.canShowCallout = true
+
+        return annotationView
+    }
+
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        let span = mapView.region.span
+        print("latitudeDelta:\(span.latitudeDelta), longitudeDelta:\(span.longitudeDelta)")
+        if span.latitudeDelta > 0.1044790983605779 || span.longitudeDelta > 0.07457650057381215{
+            for annot in mapView.annotations{
+                mapView.removeAnnotation(annot)
+            }
+        }else{
+            //新しいエリアをサーチする
+            searchNearby(region: mapView.region)
+        }
     }
 }
 
