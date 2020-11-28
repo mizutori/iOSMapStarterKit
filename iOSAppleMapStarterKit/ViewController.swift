@@ -180,6 +180,17 @@ class ViewController: UIViewController, CLLocationManagerDelegate, MKMapViewDele
         return annotationView
     }
 
-    
+    func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+        let span = mapView.region.span
+        print("latitudeDelta:\(span.latitudeDelta), longitudeDelta:\(span.longitudeDelta)")
+        if span.latitudeDelta > 0.1044790983605779 || span.longitudeDelta > 0.07457650057381215{
+            for annot in mapView.annotations{
+                mapView.removeAnnotation(annot)
+            }
+        }else{
+            //新しいエリアをサーチする
+            searchNearby(region: mapView.region)
+        }
+    }
 }
 
